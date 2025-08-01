@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medication Search</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .medication-row {
+            transition: background-color 0.2s;
+        }
+        .medication-row:hover {
+            background-color: #f8f9fa;
+        }
+        .search-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+        }
+        .btn-save {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            border: none;
+        }
+        .btn-save:hover {
+            background: linear-gradient(45deg, #218838, #1ea080);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-pills me-2"></i>
+                Medication Search
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/saved">
+                    <i class="fas fa-database me-1"></i>
+                    Saved Medications
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="search-container">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <h1 class="text-center mb-4">
+                        <i class="fas fa-search me-2"></i>
+                        Search Medications
+                    </h1>
+                    <form method="POST" action="/search" class="mb-4">
+                        <div class="input-group input-group-lg">
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                name="medicationName" 
+                                placeholder="Enter medication name (e.g., Metformin)" 
+                                required
+                                value="<%= typeof medicationName !== 'undefined' ? medicationName : '' %>"
+                            >
+                            <button class="btn btn-light" type="submit">
+                                <i class="fas fa-search me-1"></i>
+                                Search
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <!-- Success/Error Messages -->
+        <% if (error) { %>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <%= error %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <% } %>
+
+        <% if (success) { %>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                <%= success %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <% } %>
+
+        <!-- Search Results -->
+        <% if (medications && medications.length > 0) { %>
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3 class="mb-0">
+                            <i class="fas fa-list-ul me-2"></i>
+                            Search Results (<%= medications.length %> found)
+                        </h3>
+                        <div>
+                            <button class="btn btn-outline-primary me-2" onclick="selectAll()">
+                                <i class="fas fa-check-square me-1"></i>
+                                Select All
+                            </button>
+                            <button class="btn btn-outline-secondary me-2" onclick="deselectAll()">
+                                <i class="fas fa-square me-1"></i>
+                                Deselect All
+                            </button>
+                            <button class="btn btn-success" onclick="saveSelectedMedications(event)">
+                                <i class="fas fa-save me-1"></i>
+                                Save Selected
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th scope="col" width="50">
+                                        <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
+                                    </th>
+                                    <th scope="col">#</th>
+                                    <th scope="col">RxCUI</th>
+                                    <th scope="col">Generic Name</th>
+                                    <th scope="col">Brand/Synonym</th>
+                                    <th scope="col" width="120">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% medications.forEach((med, index) => { %>
+                                    <tr class="medication-row">
+                                        <td>
+                                            <input 
+                                                type="checkbox" 
+                                                class="medication-checkbox" 
+                                                value="<%= index %>"
+                                                data-rxcui="<%= med.rxcui %>"
+                                                data-name="<%= med.name.replace(/"/g, '&quot;') %>"
+                                                data-synonym="<%= med.synonym.replace(/"/g, '&quot;') %>"
+                                                onchange="updateSelectAllCheckbox()"
+                                            >
+                                        </td>
+                                        <th scope="row"><%= index + 1 %></th>
+                                        <td>
+                                            <span class="badge bg-primary"><%= med.rxcui %></span>
+                                        </td>
+                                        <td>
+                                            <div class="fw-medium text-primary medication-name">
+                                                <%= med.name %>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="text-muted medication-synonym">
+                                                <%= med.synonym %>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <button 
+                                                class="btn btn-save btn-sm text-white"
+                                                onclick="saveSingleMedication('<%= med.rxcui %>', '<%= med.name.replace(/'/g, "\\'") %>', '<%= med.synonym.replace(/'/g, "\\'") %>')"
+                                                title="Save this medication"
+                                            >
+                                                <i class="fas fa-save"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Select medications using checkboxes and click "Save Selected" to save multiple at once
+                        </small>
+                        <button class="btn btn-success" onclick="saveSelectedMedications()">
+                            <i class="fas fa-save me-1"></i>
+                            Save Selected Medications
+                        </button>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+
+        <!-- No results message -->
+        <% if (!medications && !error) { %>
+            <div class="text-center mt-5">
+                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">Enter a medication name to search</h4>
+                <p class="text-muted">Try searching for medications like "Metformin", etc.</p>
+            </div>
+        <% } %>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Success
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="successMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">OK</button>
+                    <a href="/saved" class="btn btn-outline-success">View Saved Medications</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div class="modal fade" id="errorModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Error
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="errorMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function selectAll() {
+            const checkboxes = document.querySelectorAll('.medication-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            updateSelectAllCheckbox();
+        }
+
+        function deselectAll() {
+            const checkboxes = document.querySelectorAll('.medication-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updateSelectAllCheckbox();
+        }
+
+        function toggleSelectAll(selectAllCheckbox) {
+            const checkboxes = document.querySelectorAll('.medication-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+        }
+
+        function updateSelectAllCheckbox() {
+            const checkboxes = document.querySelectorAll('.medication-checkbox');
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            const checkedCount = document.querySelectorAll('.medication-checkbox:checked').length;
+            
+            selectAllCheckbox.checked = checkedCount === checkboxes.length;
+            selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+        }
+
+        function saveSelectedMedications() {
+            const selectedCheckboxes = document.querySelectorAll('.medication-checkbox:checked');
+            
+            if (selectedCheckboxes.length === 0) {
+                alert('Please select at least one medication to save.');
+                return;
+            }
+
+            const medications = [];
+            selectedCheckboxes.forEach(checkbox => {
+                medications.push({
+                    rxcui: checkbox.getAttribute('data-rxcui'),
+                    name: checkbox.getAttribute('data-name'),
+                    synonym: checkbox.getAttribute('data-synonym')
+                });
+            });
+
+            // Show loading state
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+            button.disabled = true;
+
+            fetch('/save_multiple', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ medications: medications })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('successMessage').innerHTML = 
+                        `Successfully saved ${data.savedCount} medication(s). ${data.skippedCount > 0 ? data.skippedCount + ' medication(s) were already in the database.' : ''}`;
+                    new bootstrap.Modal(document.getElementById('successModal')).show();
+                    
+                    // Uncheck saved medications
+                    selectedCheckboxes.forEach(checkbox => {
+                        checkbox.checked = false;
+                    });
+                    updateSelectAllCheckbox();
+                } else {
+                    document.getElementById('errorMessage').textContent = data.message;
+                    new bootstrap.Modal(document.getElementById('errorModal')).show();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('errorMessage').textContent = 'An error occurred while saving medications.';
+                new bootstrap.Modal(document.getElementById('errorModal')).show();
+            })
+            .finally(() => {
+                // Restore button state
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        }
+
+        function saveSingleMedication(rxcui, name, synonym) {
+            // Show loading state
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            button.disabled = true;
+
+            fetch('/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    rxcui: rxcui,
+                    name: name,
+                    synonym: synonym
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('successMessage').textContent = data.message;
+                    new bootstrap.Modal(document.getElementById('successModal')).show();
+                } else {
+                    document.getElementById('errorMessage').textContent = data.message;
+                    new bootstrap.Modal(document.getElementById('errorModal')).show();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('errorMessage').textContent = 'An error occurred while saving the medication.';
+                new bootstrap.Modal(document.getElementById('errorModal')).show();
+            })
+            .finally(() => {
+                // Restore button state
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        }
+    </script>
+</body>
+</html>
