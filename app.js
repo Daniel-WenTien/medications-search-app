@@ -183,18 +183,25 @@ app.post('/save_multiple', async (req, res) => {
                     continue;
                 }
 
-                if (!synonym) {
-                    // Insert new medication
-                    await promisePool.execute(
+                const finalSynonym = synonym || name;
+
+                await promisePool.execute(
                         'INSERT INTO f_medications (name, synonym, rxcui) VALUES (?, ?, ?)', 
-                        [name, name, rxcui]
+                        [name, finalSynonym, rxcui]
                     );
-                } else {
-                     await promisePool.execute(
-                        'INSERT INTO f_medications (name, synonym, rxcui) VALUES (?, ?, ?)', 
-                        [name, synonym, rxcui]
-                    );
-                }
+
+                // if (!synonym) {
+                //     // Insert new medication
+                //     await promisePool.execute(
+                //         'INSERT INTO f_medications (name, synonym, rxcui) VALUES (?, ?, ?)', 
+                //         [name, name, rxcui]
+                //     );
+                // } else {
+                //      await promisePool.execute(
+                //         'INSERT INTO f_medications (name, synonym, rxcui) VALUES (?, ?, ?)', 
+                //         [name, synonym, rxcui]
+                //     );
+                // }
                 
 
                 savedCount++;
@@ -244,20 +251,22 @@ app.post('/save', async (req, res) => {
             return res.json({ success: false, message: 'Medication already exists in database' });
         }
 
-        if (!synonym) {
-           const [result] = await promisePool.execute(
-                'INSERT INTO f_medications (name, synonym, rxcui) VALUES (?, ?, ?)', 
-                [name, name, rxcui]
-            );
-        } else {
-            // Insert new medication
-            const [result] = await promisePool.execute(
-                'INSERT INTO f_medications (name, synonym, rxcui) VALUES (?, ?, ?)', 
-                [name, synonym, rxcui]
-            );
-        }
+        const finalSynonym = synonym || name;
 
-        
+        const [result] = await promisePool.execute(
+                'INSERT INTO f_medications (name, synonym, rxcui) VALUES (?, ?, ?)', 
+                [name, finalSynonym, rxcui]
+            );
+
+        // if (!synonym) {
+           
+        // } else {
+        //     // Insert new medication
+        //     const [result] = await promisePool.execute(
+        //         'INSERT INTO f_medications (name, synonym, rxcui) VALUES (?, ?, ?)', 
+        //         [name, synonym, rxcui]
+        //     );
+        // }
 
         res.json({ 
             success: true, 
