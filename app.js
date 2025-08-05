@@ -152,7 +152,6 @@ app.post('/search', async (req, res) => {
 // Save multiple medications to database
 app.post('/save_multiple', async (req, res) => {
     const { medications } = req.body;
-    console.log('Received medications:', medications);
 
     if (!medications || !Array.isArray(medications) || medications.length === 0) {
         return res.json({ success: false, message: 'No medications provided' });
@@ -189,20 +188,6 @@ app.post('/save_multiple', async (req, res) => {
                         'INSERT INTO f_medications (name, synonym, rxcui) VALUES (?, ?, ?)', 
                         [name, finalSynonym, rxcui]
                     );
-
-                // if (!synonym) {
-                //     // Insert new medication
-                //     await promisePool.execute(
-                //         'INSERT INTO f_medications (name, synonym, rxcui) VALUES (?, ?, ?)', 
-                //         [name, name, rxcui]
-                //     );
-                // } else {
-                //      await promisePool.execute(
-                //         'INSERT INTO f_medications (name, synonym, rxcui) VALUES (?, ?, ?)', 
-                //         [name, synonym, rxcui]
-                //     );
-                // }
-                
 
                 savedCount++;
             } catch (error) {
@@ -257,16 +242,6 @@ app.post('/save', async (req, res) => {
                 'INSERT INTO f_medications (name, synonym, rxcui) VALUES (?, ?, ?)', 
                 [name, finalSynonym, rxcui]
             );
-
-        // if (!synonym) {
-           
-        // } else {
-        //     // Insert new medication
-        //     const [result] = await promisePool.execute(
-        //         'INSERT INTO f_medications (name, synonym, rxcui) VALUES (?, ?, ?)', 
-        //         [name, synonym, rxcui]
-        //     );
-        // }
 
         res.json({ 
             success: true, 
@@ -345,19 +320,6 @@ app.get('/saved', async (req, res) => {
         });
     }
 });
-
-// app.get('/saved', async (req, res) => {
-//     try {
-//         const [rows] = await promisePool.execute(
-//             'SELECT * FROM f_medications ORDER BY created_at DESC'
-//         );
-
-//         res.render('saved', { medications: rows, error: null });
-//     } catch (error) {
-//         console.error('Database error:', error);
-//         res.render('saved', { medications: [], error: 'Error loading saved medications' });
-//     }
-// });
 
 // Delete medication
 app.post('/delete/:id', async (req, res) => {
